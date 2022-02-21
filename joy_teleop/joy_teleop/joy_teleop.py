@@ -127,9 +127,6 @@ class JoyTeleopCommand:
                 # An index error can occur if this command is configured for multiple buttons
                 # like (0, 10), but the length of the joystick buttons is only 1.  Ignore these.
                 pass
-        
-        self.active |= self.is_default
-
 
 class JoyTeleopTopicCommand(JoyTeleopCommand):
 
@@ -200,10 +197,22 @@ class JoyTeleopTopicCommand(JoyTeleopCommand):
         #     transitioned from 0 -> 1, or it means that this is an axis mapping and data should
         #     continue to be published without debouncing.
 
+        # If it's default, just publish
+        if self.is_default and node.all_inactive:
+            # default message always fixed
+            if hasattr(self.msg_value, 'header'):
+                self.msg_value.header.stamp = node.get_clock().now().to_msg()
+
+            self.pub.publish(self.msg_value)
+
         last_active = self.active
         self.update_active_from_buttons_and_axes(joy_state)
+
         if not self.active:
             return
+        else:
+            node.all_inactive = False
+            
         if self.msg_value is not None and last_active == self.active:
             return
 
@@ -361,6 +370,7 @@ class JoyTeleop(Node):
                          automatically_declare_parameters_from_overrides=True)
 
         self.commands = []
+        self.all_inactive = True
 
         names = []
 
@@ -414,6 +424,7 @@ class JoyTeleop(Node):
         for command in self.commands:
             command.run(self, msg)
 
+        self.all_inactive = True
 
 def main(args=None):
     rclpy.init(args=args)
