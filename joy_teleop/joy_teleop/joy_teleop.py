@@ -82,8 +82,13 @@ class JoyTeleopCommand:
         self.axes: typing.List[str] = []
         if axes_name in config:
             self.axes = config[axes_name]
+        
+        # Add default method
+        self.is_default = False
+        if "is_default" in config and config["is_default"]:
+            self.is_default = True
 
-        if len(self.buttons) == 0 and len(self.axes) == 0:
+        if len(self.buttons) == 0 and len(self.axes) == 0 and "is_default" not in config:
             raise JoyTeleopException("No buttons or axes configured for command '{}'".format(name))
 
         # Used to short-circuit the run command if there aren't enough buttons in the message.
@@ -109,7 +114,7 @@ class JoyTeleopCommand:
 
         for button in self.buttons:
             try:
-                self.active |= joy_state.buttons[button] == 1
+                self.active |= joy_state.buttons[button] == 1 
             except IndexError:
                 # An index error can occur if this command is configured for multiple buttons
                 # like (0, 10), but the length of the joystick buttons is only 1.  Ignore these.
@@ -122,6 +127,8 @@ class JoyTeleopCommand:
                 # An index error can occur if this command is configured for multiple buttons
                 # like (0, 10), but the length of the joystick buttons is only 1.  Ignore these.
                 pass
+        
+        self.active |= self.is_default
 
 
 class JoyTeleopTopicCommand(JoyTeleopCommand):
@@ -136,6 +143,7 @@ class JoyTeleopTopicCommand(JoyTeleopCommand):
         # A 'message_value' is a fixed message that is sent in response to an activation.  It is
         # mutually exclusive with an 'axis_mapping'.
         self.msg_value = None
+
         if 'message_value' in config:
             msg_config = config['message_value']
 
