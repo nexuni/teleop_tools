@@ -196,15 +196,6 @@ class JoyTeleopTopicCommand(JoyTeleopCommand):
         # 5.  In all other cases, publish.  This means that this is a msg_value and the button
         #     transitioned from 0 -> 1, or it means that this is an axis mapping and data should
         #     continue to be published without debouncing.
-
-        # If it's default, just publish
-        if self.is_default and node.all_inactive:
-            # default message always fixed
-            if hasattr(self.msg_value, 'header'):
-                self.msg_value.header.stamp = node.get_clock().now().to_msg()
-
-            self.pub.publish(self.msg_value)
-
         last_active = self.active
         self.update_active_from_buttons_and_axes(joy_state)
 
@@ -421,8 +412,19 @@ class JoyTeleop(Node):
             self.insert_dict(dictionary[split[0]], split[2], value)
 
     def joy_callback(self, msg: sensor_msgs.msg.Joy) -> None:
+        default_command = None
         for command in self.commands:
             command.run(self, msg)
+            if command.is_default:
+                default_command = command
+
+        # If it's default, just publish
+        if default_command and self.all_inactive:
+            # default message always fixed
+            if hasattr(default_command.msg_value, 'header'):
+                default_command.msg_value.header.stamp = self.get_clock().now().to_msg()
+
+            default_command.pub.publish(default_command.msg_value)
 
         self.all_inactive = True
 
