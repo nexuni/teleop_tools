@@ -238,6 +238,7 @@ class JoyTeleopTopicCommand(JoyTeleopCommand):
         # If there is a stamp field, fill it with now().
         if hasattr(msg, 'header'):
             msg.header.stamp = node.get_clock().now().to_msg()
+            msg.header.frame_id = "base_link"
 
         self.pub.publish(msg)
 
